@@ -24,7 +24,6 @@
             width: 100%;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
         }
         .icon { font-size: 72px; margin-bottom: 20px; }
         h1 {
@@ -34,7 +33,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        h2 { margin-bottom: 12px; color: #fff; }
         p { color: #a0aec0; line-height: 1.6; margin-bottom: 28px; }
         .loader {
             width: 48px;
@@ -71,10 +69,7 @@
             width: 100%;
             margin-top: 12px;
         }
-        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(88,101,242,0.3); }
-        .btn-discord {
-            background: linear-gradient(135deg, #5865F2, #4752c4);
-        }
+        button:hover { transform: translateY(-2px); }
         .btn-roblox {
             background: linear-gradient(135deg, #ffffff, #e2e8f0);
             color: #1a202c;
@@ -82,7 +77,6 @@
         .btn-roblox:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
         hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 24px 0; }
         .status-badge {
@@ -108,21 +102,13 @@
             border-radius: 50%;
             border: 2px solid #5865F2;
         }
-        .discord-name {
-            text-align: left;
-        }
-        .discord-name strong {
-            color: white;
-        }
-        .discord-name small {
-            color: #888;
-        }
+        .discord-name { text-align: left; }
+        .discord-name strong { color: white; }
+        .discord-name small { color: #888; }
     </style>
 </head>
 <body>
-    <div class="card" id="app">
-        <!-- Dynamischer Content -->
-    </div>
+    <div class="card" id="app"></div>
 
     <script>
         // ===== KONFIGURATION =====
@@ -131,10 +117,8 @@
         const DISCORD_CLIENT_ID = '1503179151073345678';
         const ROBLOX_CLIENT_ID = '1529843549493669743';
         
-        // ===== GLOBALE VARIABLEN =====
         let currentDiscordUser = null;
         
-        // ===== HELPER =====
         function saveDiscordUser(user) {
             localStorage.setItem('discord_user', JSON.stringify(user));
             currentDiscordUser = user;
@@ -166,7 +150,6 @@
             });
         }
         
-        // ===== UI PAGES =====
         function showMainPage() {
             const app = document.getElementById('app');
             
@@ -178,7 +161,6 @@
                 app.innerHTML = `
                     <div class="icon">🔗</div>
                     <h1>Roblox Verification</h1>
-                    
                     <div class="discord-user-info">
                         <img src="${avatarUrl}" class="discord-avatar">
                         <div class="discord-name">
@@ -186,217 +168,134 @@
                             <small>@${escapeHtml(currentDiscordUser.username)}</small>
                         </div>
                     </div>
-                    
-                    <p>Verbinde deinen Roblox Account mit Discord.<br>
-                    Dein Nickname wird automatisch geändert und du erhältst die Verified Rolle.</p>
-                    
-                    <button id="robloxBtn" class="btn-roblox">
-                        🎮 Mit Roblox verifizieren
-                    </button>
-                    
-                    <button id="logoutBtn" style="background: #4a5568; margin-top: 8px;">
-                        🔓 Discord Logout
-                    </button>
-                    
+                    <p>Verbinde deinen Roblox Account.<br>Dein Nickname wird automatisch geändert.</p>
+                    <button id="robloxBtn" class="btn-roblox">🎮 Mit Roblox verifizieren</button>
+                    <button id="logoutBtn" style="background: #4a5568;">🔓 Logout</button>
                     <hr>
-                    
-                    <div>
-                        <span class="status-badge status-online" id="apiStatus">● API Online</span>
-                    </div>
+                    <div><span class="status-badge status-online">● API Online</span></div>
                 `;
-                
-                document.getElementById('robloxBtn').addEventListener('click', startRobloxLogin);
-                document.getElementById('logoutBtn').addEventListener('click', () => {
-                    clearDiscordUser();
-                    showMainPage();
-                });
+                document.getElementById('robloxBtn').onclick = startRobloxLogin;
+                document.getElementById('logoutBtn').onclick = () => { clearDiscordUser(); showMainPage(); };
             } else {
                 app.innerHTML = `
                     <div class="icon">🔗</div>
                     <h1>Roblox Verification</h1>
                     <p>Verifiziere deinen Roblox Account und erhalte automatisch die Verified Rolle.</p>
-                    
-                    <button id="discordBtn" class="btn-discord">
-                        💬 Mit Discord anmelden
-                    </button>
-                    
+                    <button id="discordBtn" class="btn-discord">💬 1. Mit Discord anmelden</button>
                     <hr>
-                    
-                    <div>
-                        <span class="status-badge status-online" id="apiStatus">● API Online</span>
-                    </div>
-                    
-                    <div class="footer-note">
-                        Nach der Verifizierung wird dein Discord Nickname auf<br>
-                        <strong>RobloxName (@RobloxUsername)</strong> geändert.
-                    </div>
+                    <div><span class="status-badge status-online">● API Online</span></div>
+                    <div class="footer-note">Nach Verifizierung wird dein Nickname geändert.</div>
                 `;
-                
-                document.getElementById('discordBtn').addEventListener('click', startDiscordLogin);
+                document.getElementById('discordBtn').onclick = startDiscordLogin;
             }
-            
-            checkApiStatus();
         }
         
         function showLoading(message) {
-            const app = document.getElementById('app');
-            app.innerHTML = `
+            document.getElementById('app').innerHTML = `
                 <div class="icon">⏳</div>
                 <h2>${message}</h2>
                 <div class="loader"></div>
-                <p>Bitte warte einen Moment...</p>
+                <p>Bitte warte...</p>
             `;
         }
         
-        function showSuccess(robloxData) {
-            const app = document.getElementById('app');
-            app.innerHTML = `
+        function showSuccess(data) {
+            document.getElementById('app').innerHTML = `
                 <div class="icon">✅</div>
                 <h2 class="success">Verifizierung erfolgreich!</h2>
                 <div class="detail-box">
-                    <p><strong>🎮 Roblox Profil:</strong><br>
-                    <a href="https://www.roblox.com/users/${escapeHtml(robloxData.robloxId)}/profile" target="_blank">
-                        ${escapeHtml(robloxData.displayName)} (@${escapeHtml(robloxData.username)})
-                    </a></p>
-                    <p><strong>🏷️ Neuer Discord Nickname:</strong><br>${escapeHtml(robloxData.nickname)}</p>
-                    <p><strong>✅ Verified Rolle:</strong> Wurde hinzugefügt</p>
+                    <p><strong>🎮 Roblox:</strong><br>${escapeHtml(data.displayName)} (@${escapeHtml(data.username)})</p>
+                    <p><strong>🏷️ Neuer Nickname:</strong><br>${escapeHtml(data.nickname)}</p>
+                    <p><strong>✅ Verified Rolle:</strong> Hinzugefügt</p>
                 </div>
-                <button onclick="window.location.href='https://discord.com/app'">
-                    💬 Zu Discord gehen
-                </button>
-                <button onclick="clearDiscordUser(); showMainPage();" style="margin-top: 8px; background: #4a5568;">
-                    🔄 Neue Verifizierung
-                </button>
-                <p class="footer-note">Dein Nickname wurde automatisch aktualisiert.</p>
+                <button onclick="window.location.href='https://discord.com/app'">💬 Zu Discord</button>
+                <button onclick="clearDiscordUser(); showMainPage();" style="margin-top:8px;background:#4a5568;">🔄 Neue Verifizierung</button>
             `;
         }
         
-        function showError(errorMsg) {
-            const app = document.getElementById('app');
-            app.innerHTML = `
+        function showError(msg) {
+            document.getElementById('app').innerHTML = `
                 <div class="icon">❌</div>
                 <h2 class="error">Fehler</h2>
-                <div class="detail-box" style="border-color:#f56565;">
-                    <p>${escapeHtml(errorMsg)}</p>
-                </div>
+                <div class="detail-box"><p>${escapeHtml(msg)}</p></div>
                 <button onclick="location.reload()">🔄 Neu starten</button>
                 <button onclick="window.location.href='https://discord.com/app'" style="margin-top:12px;">💬 Zu Discord</button>
             `;
         }
         
-        async function checkApiStatus() {
-            const statusSpan = document.getElementById('apiStatus');
-            if (!statusSpan) return;
-            try {
-                const response = await fetch(`${WORKER_URL}/`);
-                if (response.ok) {
-                    statusSpan.innerHTML = '● API Online';
-                    statusSpan.style.color = '#48bb78';
-                } else {
-                    statusSpan.innerHTML = '● API Error';
-                    statusSpan.style.color = '#f56565';
-                }
-            } catch (error) {
-                statusSpan.innerHTML = '● API Offline';
-                statusSpan.style.color = '#f56565';
-            }
-        }
-        
-        // ===== DISCORD LOGIN =====
+        // Discord Login (nur um User ID zu bekommen)
         function startDiscordLogin() {
             const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify&state=discord`;
             window.location.href = url;
         }
         
         async function handleDiscordCallback(code) {
-            showLoading('Discord Login wird verarbeitet...');
-            
+            showLoading('Discord Login...');
             try {
-                const response = await fetch(`${WORKER_URL}/discord-token`, {
+                const res = await fetch(`${WORKER_URL}/discord-token`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
                 });
-                
-                const data = await response.json();
-                
+                const data = await res.json();
                 if (data.user) {
                     saveDiscordUser(data.user);
                     window.history.pushState({}, '', REDIRECT_URI);
                     showMainPage();
                 } else {
-                    throw new Error('Keine Benutzerdaten erhalten');
+                    throw new Error('Keine Daten');
                 }
             } catch (err) {
-                console.error(err);
                 showError('Discord Login fehlgeschlagen: ' + err.message);
             }
         }
         
-        // ===== ROBLOX LOGIN =====
+        // Roblox Login - Worker macht alles
         function startRobloxLogin() {
             if (!currentDiscordUser) {
                 showError('Bitte zuerst mit Discord anmelden!');
                 return;
             }
-            
-            const state = encodeURIComponent(JSON.stringify({ 
-                discordId: currentDiscordUser.id,
-                source: 'web'
-            }));
-            
-            const url = `https://apis.roblox.com/oauth/v1/authorize?client_id=${ROBLOX_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=openid+profile&state=${state}`;
-            window.location.href = url;
+            const state = encodeURIComponent(JSON.stringify({ discordId: currentDiscordUser.id }));
+            window.location.href = `https://apis.roblox.com/oauth/v1/authorize?client_id=${ROBLOX_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=openid+profile&state=${state}`;
         }
         
         async function handleRobloxCallback(code, state) {
-            showLoading('Roblox Verifizierung wird verarbeitet...');
-            
+            showLoading('Roblox Verifizierung...');
             try {
-                const response = await fetch(`${WORKER_URL}/verify`, {
+                const res = await fetch(`${WORKER_URL}/verify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code, state })
                 });
-                
-                const result = await response.json();
-                
+                const result = await res.json();
                 if (result.success) {
                     showSuccess(result);
                     clearDiscordUser();
                 } else {
-                    throw new Error(result.error || 'Verifizierung fehlgeschlagen');
+                    throw new Error(result.error || 'Fehler');
                 }
             } catch (err) {
-                console.error(err);
-                showError('Roblox Verifizierung fehlgeschlagen: ' + err.message);
+                showError('Roblox Fehler: ' + err.message);
             }
         }
         
-        // ===== HAUPTLOGIK =====
+        // Hauptlogik
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
             const state = urlParams.get('state');
             
-            // Discord Callback
             if (code && state === 'discord') {
                 await handleDiscordCallback(code);
-                return;
-            }
-            
-            // Roblox Callback
-            if (code && state) {
+            } else if (code && state) {
                 await handleRobloxCallback(code, state);
-                return;
+            } else {
+                loadDiscordUser();
+                showMainPage();
             }
-            
-            // Normaler Start
-            loadDiscordUser();
-            showMainPage();
         }
         
-        // Start
         init();
     </script>
 </body>
