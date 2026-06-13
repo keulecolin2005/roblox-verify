@@ -1,124 +1,186 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox Verification</title>
+    <title>Roblox Verifikation</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #0f0f1a;
-            color: white;
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
             padding: 20px;
         }
-        .container {
-            background: #1a1a2e;
-            border-radius: 16px;
+        .card {
+            background: #1a1a1a;
+            border-radius: 24px;
             padding: 40px;
-            max-width: 480px;
+            max-width: 500px;
             width: 100%;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 1px solid #2a2a2a;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
         }
-        .logo {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 20px;
-        }
-        h1 { font-size: 24px; margin-bottom: 10px; }
-        .success { color: #00ff88; }
-        .error { color: #ff4444; }
+        .icon { font-size: 64px; margin-bottom: 20px; }
+        h2 { margin-bottom: 12px; color: #fff; }
+        p { color: #aaa; line-height: 1.5; margin-bottom: 24px; }
         .loader {
-            border: 4px solid #2a2a3e;
-            border-top: 4px solid #00ff88;
+            width: 48px;
+            height: 48px;
+            border: 4px solid #2a2a2a;
+            border-top-color: #5865F2;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            margin: 20px auto;
             animation: spin 1s linear infinite;
-            margin: 30px auto;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .info-box {
-            background: #0f0f1a;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .success { color: #48bb78; }
+        .error { color: #f56565; }
+        .detail-box {
+            background: #0f0f0f;
+            border-radius: 16px;
+            padding: 16px;
+            margin: 16px 0;
             text-align: left;
+            font-size: 14px;
         }
-        .info-box p { margin: 8px 0; font-size: 14px; }
-        .info-box b { color: #00ff88; }
-        .btn {
-            display: inline-block;
+        button {
             background: #5865F2;
             color: white;
+            border: none;
             padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 15px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 16px;
         }
-        .btn:hover { background: #4752c4; }
+        button:hover { background: #4752c4; transform: translateY(-2px); }
+        a { color: #48bb78; text-decoration: none; }
+        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <img src="https://www.roblox.com/favicon.ico" alt="Roblox" class="logo">
-        <h1>🔗 Roblox Verification</h1>
-        <div id="content">
-            <div class="loader" id="loader"></div>
-            <p id="status">Verifying...</p>
-        </div>
+    <div class="card" id="statusCard">
+        <div class="icon" id="statusIcon">🔗</div>
+        <h2 id="statusTitle">Roblox Verifikation</h2>
+        <div id="statusMessage"></div>
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const state = urlParams.get('state');
-        const content = document.getElementById('content');
+        // ===== KONFIGURATION =====
+        // WICHTIG: HIER MUSS DEINE WORKER-URL STEHEN!
+        const WORKER_API_URL = 'https://fancy-mode-1373.keulecolin2005.workers.dev';
+        
+        // ===== HELPER =====
+        function showLoading() {
+            const msgDiv = document.getElementById('statusMessage');
+            document.getElementById('statusIcon').textContent = '⏳';
+            document.getElementById('statusTitle').textContent = 'Verarbeitung läuft...';
+            msgDiv.innerHTML = `
+                <div class="loader"></div>
+                <p>Dein Roblox-Account wird verifiziert. Bitte warte einen Moment...</p>
+            `;
+        }
 
-        async function verify() {
-            if (!code) {
-                content.innerHTML = `
-                    <h2 class="error">❌ Error</h2>
-                    <p>No verification code received.</p>
-                    <p style="font-size:12px;color:#888;margin-top:10px;">Please use the Verify button in Discord.</p>
-                `;
-                return;
-            }
+        function showSuccess(data) {
+            const msgDiv = document.getElementById('statusMessage');
+            document.getElementById('statusIcon').textContent = '✅';
+            document.getElementById('statusTitle').textContent = 'Erfolgreich verifiziert!';
+            document.getElementById('statusTitle').className = 'success';
+            msgDiv.innerHTML = `
+                <div class="detail-box">
+                    <p><strong>👤 Discord Nickname:</strong><br>${escapeHtml(data.nickname || 'Aktualisiert')}</p>
+                    <p><strong>🎮 Roblox Profil:</strong><br>
+                    <a href="https://www.roblox.com/users/${escapeHtml(data.robloxId)}/profile" target="_blank">
+                        ${escapeHtml(data.displayName || data.username)} (@${escapeHtml(data.username)})
+                    </a></p>
+                    <p><strong>✅ Status:</strong> Verifiziert und mit Discord verknüpft.</p>
+                </div>
+                <p>Du kannst dieses Fenster jetzt schließen und kehrst automatisch zu Discord zurück.</p>
+                <button onclick="window.close()">Fenster schließen</button>
+                <p style="margin-top: 16px; font-size: 12px;">Falls das Fenster nicht automatisch schließt, klicke einfach auf den Button.</p>
+            `;
+            setTimeout(() => window.close(), 5000);
+        }
 
-            try {
-                const response = await fetch(
-                    'https://fancy-mode-1373.keulecolin2005.workers.dev/oauth-callback?code=' + 
-                    encodeURIComponent(code) + 
-                    '&state=' + encodeURIComponent(state || '')
-                );
+        function showError(errorMsg) {
+            const msgDiv = document.getElementById('statusMessage');
+            document.getElementById('statusIcon').textContent = '❌';
+            document.getElementById('statusTitle').textContent = 'Verifizierung fehlgeschlagen';
+            document.getElementById('statusTitle').className = 'error';
+            msgDiv.innerHTML = `
+                <div class="detail-box" style="border-color: #f56565;">
+                    <p style="color: #f56565;"><strong>Fehler:</strong> ${escapeHtml(errorMsg)}</p>
+                    <p style="margin-top: 8px;">Mögliche Ursachen:</p>
+                    <ul style="margin-left: 20px; color: #aaa;">
+                        <li>Du bist nicht im richtigen Discord-Server.</li>
+                        <li>Dein Roblox-Account konnte nicht bestätigt werden.</li>
+                        <li>Es gab ein technisches Problem mit dem Verifikationsservice.</li>
+                    </ul>
+                </div>
+                <button onclick="window.location.href='https://discord.com/app'">Zu Discord gehen</button>
+            `;
+        }
 
-                if (response.ok) {
-                    const html = await response.text();
-                    content.innerHTML = html;
-                } else {
-                    const text = await response.text();
-                    content.innerHTML = `
-                        <h2 class="error">❌ Verification Failed</h2>
-                        <p>${text || 'Unknown error'}</p>
-                        <a href="discord://-" class="btn">Return to Discord</a>
-                    `;
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // ===== HAUPTLOGIK =====
+        async function processVerification() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+
+            // Fall 1: Es gibt einen Code von Roblox -> Verifikation starten
+            if (code) {
+                showLoading();
+                try {
+                    // Sende den Code an deinen Worker
+                    const response = await fetch(`${WORKER_API_URL}/verify`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code, state })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        showSuccess(result);
+                    } else {
+                        showError(result.error || 'Unbekannter Fehler vom Verifikationsserver.');
+                    }
+                } catch (err) {
+                    console.error('Worker-Fehler:', err);
+                    showError(`Netzwerkfehler: ${err.message}. Kann den Verifikationsserver nicht erreichen.`);
                 }
-            } catch (err) {
-                content.innerHTML = `
-                    <h2 class="error">❌ Connection Error</h2>
-                    <p>Could not connect to verification server.</p>
-                    <p style="font-size:12px;color:#888;">${err.message}</p>
+            } 
+            // Fall 2: Kein Code -> Seite wurde ohne OAuth-Callback aufgerufen
+            else {
+                const msgDiv = document.getElementById('statusMessage');
+                document.getElementById('statusIcon').textContent = '⚠️';
+                document.getElementById('statusTitle').textContent = 'Kein Verifikationscode';
+                msgDiv.innerHTML = `
+                    <p>Diese Seite wurde ohne einen gültigen Verifikationscode aufgerufen.</p>
+                    <p>Bitte nutze den <strong>"Verify with Roblox"</strong> Button auf dem Discord-Server, um den Vorgang zu starten.</p>
+                    <button onclick="window.location.href='https://discord.com/app'">Zu Discord gehen</button>
                 `;
             }
         }
 
-        verify();
+        // Starte die Verarbeitung, sobald die Seite geladen ist
+        processVerification();
     </script>
 </body>
 </html>
