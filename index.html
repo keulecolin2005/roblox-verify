@@ -69,16 +69,20 @@
             cursor: pointer;
             transition: all 0.2s;
             width: 100%;
-            margin-top: 8px;
+            margin-top: 12px;
         }
         button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(88,101,242,0.3); }
         .btn-discord {
             background: linear-gradient(135deg, #5865F2, #4752c4);
-            margin-bottom: 12px;
         }
         .btn-roblox {
             background: linear-gradient(135deg, #ffffff, #e2e8f0);
             color: #1a202c;
+        }
+        .btn-roblox:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
         }
         hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 24px 0; }
         .status-badge {
@@ -89,31 +93,35 @@
         }
         .status-online { background: #48bb7820; color: #48bb78; border: 1px solid #48bb78; }
         .footer-note { font-size: 12px; color: #718096; margin-top: 20px; }
+        .discord-user-info {
+            background: rgba(88, 101, 242, 0.1);
+            border-radius: 16px;
+            padding: 12px;
+            margin: 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .discord-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid #5865F2;
+        }
+        .discord-name {
+            text-align: left;
+        }
+        .discord-name strong {
+            color: white;
+        }
+        .discord-name small {
+            color: #888;
+        }
     </style>
 </head>
 <body>
     <div class="card" id="app">
-        <div class="icon">🔗</div>
-        <h1>Roblox Verification</h1>
-        <p>Verbinde deinen Discord Account mit Roblox</p>
-        
-        <button id="discordBtn" class="btn-discord">
-            💬 1. Mit Discord anmelden
-        </button>
-        
-        <button id="robloxBtn" class="btn-roblox" disabled style="opacity:0.5;">
-            🎮 2. Mit Roblox verifizieren
-        </button>
-        
-        <hr>
-        
-        <div>
-            <span class="status-badge status-online" id="apiStatus">● API Online</span>
-        </div>
-        
-        <div class="footer-note" id="statusText">
-            Schritt 1: Zuerst mit Discord anmelden
-        </div>
+        <!-- Dynamischer Content -->
     </div>
 
     <script>
@@ -148,26 +156,86 @@
             currentDiscordUser = null;
         }
         
-        function updateUI() {
-            const discordBtn = document.getElementById('discordBtn');
-            const robloxBtn = document.getElementById('robloxBtn');
-            const statusText = document.getElementById('statusText');
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // ===== UI PAGES =====
+        function showMainPage() {
+            const app = document.getElementById('app');
             
             if (currentDiscordUser) {
-                discordBtn.innerHTML = `✅ ${currentDiscordUser.global_name || currentDiscordUser.username}`;
-                discordBtn.style.background = '#48bb78';
-                robloxBtn.disabled = false;
-                robloxBtn.style.opacity = '1';
-                statusText.innerHTML = `✅ Eingeloggt als ${currentDiscordUser.global_name || currentDiscordUser.username}<br>📌 Schritt 2: Jetzt mit Roblox verifizieren`;
-                statusText.style.color = '#48bb78';
+                const avatarUrl = currentDiscordUser.avatar 
+                    ? `https://cdn.discordapp.com/avatars/${currentDiscordUser.id}/${currentDiscordUser.avatar}.png`
+                    : 'https://cdn.discordapp.com/embed/avatars/0.png';
+                
+                app.innerHTML = `
+                    <div class="icon">🔗</div>
+                    <h1>Roblox Verification</h1>
+                    
+                    <div class="discord-user-info">
+                        <img src="${avatarUrl}" class="discord-avatar">
+                        <div class="discord-name">
+                            <strong>${escapeHtml(currentDiscordUser.global_name || currentDiscordUser.username)}</strong>
+                            <small>@${escapeHtml(currentDiscordUser.username)}</small>
+                        </div>
+                    </div>
+                    
+                    <p>Verbinde deinen Roblox Account mit Discord.<br>
+                    Dein Nickname wird automatisch geändert und du erhältst die Verified Rolle.</p>
+                    
+                    <button id="robloxBtn" class="btn-roblox">
+                        🎮 Mit Roblox verifizieren
+                    </button>
+                    
+                    <button id="logoutBtn" style="background: #4a5568; margin-top: 8px;">
+                        🔓 Discord Logout
+                    </button>
+                    
+                    <hr>
+                    
+                    <div>
+                        <span class="status-badge status-online" id="apiStatus">● API Online</span>
+                    </div>
+                `;
+                
+                document.getElementById('robloxBtn').addEventListener('click', startRobloxLogin);
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    clearDiscordUser();
+                    showMainPage();
+                });
             } else {
-                discordBtn.innerHTML = '💬 1. Mit Discord anmelden';
-                discordBtn.style.background = 'linear-gradient(135deg, #5865F2, #4752c4)';
-                robloxBtn.disabled = true;
-                robloxBtn.style.opacity = '0.5';
-                statusText.innerHTML = 'Schritt 1: Zuerst mit Discord anmelden';
-                statusText.style.color = '#718096';
+                app.innerHTML = `
+                    <div class="icon">🔗</div>
+                    <h1>Roblox Verification</h1>
+                    <p>Verifiziere deinen Roblox Account und erhalte automatisch die Verified Rolle.</p>
+                    
+                    <button id="discordBtn" class="btn-discord">
+                        💬 Mit Discord anmelden
+                    </button>
+                    
+                    <hr>
+                    
+                    <div>
+                        <span class="status-badge status-online" id="apiStatus">● API Online</span>
+                    </div>
+                    
+                    <div class="footer-note">
+                        Nach der Verifizierung wird dein Discord Nickname auf<br>
+                        <strong>RobloxName (@RobloxUsername)</strong> geändert.
+                    </div>
+                `;
+                
+                document.getElementById('discordBtn').addEventListener('click', startDiscordLogin);
             }
+            
+            checkApiStatus();
         }
         
         function showLoading(message) {
@@ -180,24 +248,26 @@
             `;
         }
         
-        function showSuccess(robloxData, discordUser) {
+        function showSuccess(robloxData) {
             const app = document.getElementById('app');
             app.innerHTML = `
                 <div class="icon">✅</div>
                 <h2 class="success">Verifizierung erfolgreich!</h2>
                 <div class="detail-box">
-                    <p><strong>💬 Discord:</strong><br>${escapeHtml(discordUser.global_name || discordUser.username)}</p>
-                    <p><strong>🎮 Roblox:</strong><br>
+                    <p><strong>🎮 Roblox Profil:</strong><br>
                     <a href="https://www.roblox.com/users/${escapeHtml(robloxData.robloxId)}/profile" target="_blank">
                         ${escapeHtml(robloxData.displayName)} (@${escapeHtml(robloxData.username)})
                     </a></p>
-                    <p><strong>🏷️ Neuer Nickname:</strong><br>${escapeHtml(robloxData.nickname)}</p>
+                    <p><strong>🏷️ Neuer Discord Nickname:</strong><br>${escapeHtml(robloxData.nickname)}</p>
                     <p><strong>✅ Verified Rolle:</strong> Wurde hinzugefügt</p>
                 </div>
                 <button onclick="window.location.href='https://discord.com/app'">
                     💬 Zu Discord gehen
                 </button>
-                <p class="footer-note">Dein Nickname wurde automatisch aktualisiert. Du kannst dieses Fenster schließen.</p>
+                <button onclick="clearDiscordUser(); showMainPage();" style="margin-top: 8px; background: #4a5568;">
+                    🔄 Neue Verifizierung
+                </button>
+                <p class="footer-note">Dein Nickname wurde automatisch aktualisiert.</p>
             `;
         }
         
@@ -214,14 +284,22 @@
             `;
         }
         
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
+        async function checkApiStatus() {
+            const statusSpan = document.getElementById('apiStatus');
+            if (!statusSpan) return;
+            try {
+                const response = await fetch(`${WORKER_URL}/`);
+                if (response.ok) {
+                    statusSpan.innerHTML = '● API Online';
+                    statusSpan.style.color = '#48bb78';
+                } else {
+                    statusSpan.innerHTML = '● API Error';
+                    statusSpan.style.color = '#f56565';
+                }
+            } catch (error) {
+                statusSpan.innerHTML = '● API Offline';
+                statusSpan.style.color = '#f56565';
+            }
         }
         
         // ===== DISCORD LOGIN =====
@@ -245,7 +323,7 @@
                 if (data.user) {
                     saveDiscordUser(data.user);
                     window.history.pushState({}, '', REDIRECT_URI);
-                    location.reload();
+                    showMainPage();
                 } else {
                     throw new Error('Keine Benutzerdaten erhalten');
                 }
@@ -283,8 +361,8 @@
                 
                 const result = await response.json();
                 
-                if (result.success && currentDiscordUser) {
-                    showSuccess(result, currentDiscordUser);
+                if (result.success) {
+                    showSuccess(result);
                     clearDiscordUser();
                 } else {
                     throw new Error(result.error || 'Verifizierung fehlgeschlagen');
@@ -313,55 +391,9 @@
                 return;
             }
             
-            // Normaler Start: Gespeicherten User laden
-            const savedUser = loadDiscordUser();
-            if (savedUser) {
-                currentDiscordUser = savedUser;
-            }
-            
-            // UI anzeigen
-            const app = document.getElementById('app');
-            app.innerHTML = `
-                <div class="icon">🔗</div>
-                <h1>Roblox Verification</h1>
-                <p>Verbinde deinen Discord Account mit Roblox</p>
-                
-                <button id="discordBtn" class="btn-discord">
-                    💬 1. Mit Discord anmelden
-                </button>
-                
-                <button id="robloxBtn" class="btn-roblox" disabled style="opacity:0.5;">
-                    🎮 2. Mit Roblox verifizieren
-                </button>
-                
-                <hr>
-                
-                <div>
-                    <span class="status-badge status-online" id="apiStatus">● API Online</span>
-                </div>
-                
-                <div class="footer-note" id="statusText">
-                    Schritt 1: Zuerst mit Discord anmelden
-                </div>
-            `;
-            
-            // Event Listener
-            document.getElementById('discordBtn').addEventListener('click', startDiscordLogin);
-            document.getElementById('robloxBtn').addEventListener('click', startRobloxLogin);
-            
-            // UI aktualisieren
-            if (currentDiscordUser) {
-                const discordBtn = document.getElementById('discordBtn');
-                const robloxBtn = document.getElementById('robloxBtn');
-                const statusText = document.getElementById('statusText');
-                
-                discordBtn.innerHTML = `✅ ${currentDiscordUser.global_name || currentDiscordUser.username}`;
-                discordBtn.style.background = '#48bb78';
-                robloxBtn.disabled = false;
-                robloxBtn.style.opacity = '1';
-                statusText.innerHTML = `✅ Eingeloggt als ${currentDiscordUser.global_name || currentDiscordUser.username}<br>📌 Schritt 2: Jetzt mit Roblox verifizieren`;
-                statusText.style.color = '#48bb78';
-            }
+            // Normaler Start
+            loadDiscordUser();
+            showMainPage();
         }
         
         // Start
