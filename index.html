@@ -1,185 +1,628 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox Verification</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SwordArtOnline | Login</title>
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: Arial;
-            background: #1e1e1e;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        * {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .card {
-            background: #2a2a2a;
-            padding: 40px;
-            border-radius: 16px;
-            max-width: 450px;
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #050505;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        .login-container {
             text-align: center;
+            background: #0a0a0a;
+            padding: 50px 40px;
+            border-radius: 25px;
+            border: 1px solid #1f1f1f;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
-        button {
+
+        .logo-main {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            font-weight: 800;
+            font-size: 26px;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #2b2b2b, #111);
+            color: #fff;
+            border: 2px solid #333;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .login-container p {
+            font-size: 15px;
+            color: #888;
+            margin-bottom: 35px;
+            line-height: 1.5;
+        }
+
+        .btn-discord {
             background: #5865F2;
             color: white;
             border: none;
-            padding: 14px 28px;
-            border-radius: 8px;
+            padding: 16px 30px;
+            border-radius: 12px;
+            font-weight: 700;
             cursor: pointer;
-            font-size: 16px;
-            margin-top: 20px;
             width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.2s;
+            text-decoration: none;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+            margin-bottom: 15px;
         }
-        .loader {
-            border: 3px solid #333;
-            border-top: 3px solid #5865F2;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+
+        .btn-roblox {
+            background: white;
+            color: black;
+            border: none;
+            padding: 16px 30px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.2s;
+            text-decoration: none;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .success { color: #48bb78; }
-        .error { color: #f56565; }
-        .info-box {
-            background: #1a1a1a;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            text-align: left;
+
+        .btn-discord:hover, .btn-roblox:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,255,255,0.15);
+        }
+
+        .btn-discord:disabled, .btn-roblox:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-link {
+            color: #888;
+            text-decoration: none;
             font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .btn-link:hover {
+            color: #ffd700;
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 28px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transition: 0.3s;
+            transform: translateX(200%);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .bg-success {
+            background: #48bb78;
+        }
+
+        .bg-error {
+            background: #f56565;
+        }
+
+        .bg-warning {
+            background: #cd7f32;
+        }
+
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 30px 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="card" id="app">
-        <div id="content">
-            <!-- Dynamischer Content -->
+
+    <div id="loginPage" class="login-container">
+        <div class="logo-main">SAO</div>
+        <h1>SwordArtOnline</h1>
+        <p>Login with your Discord account to access the panel.</p>
+        <button id="discordLoginBtn" class="btn-discord">
+            <i class="fab fa-discord"></i> Login with Discord
+        </button>
+        
+        <div style="display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap;">
+            <a href="#" class="btn-link"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+            <a href="#" class="btn-link"><i class="fas fa-file-contract"></i> Terms of Service</a>
         </div>
     </div>
 
+    <div id="robloxPage" class="login-container hidden">
+        <div class="logo-main" style="background: linear-gradient(135deg, #111, #000); border-color: #aaa;">RBLX</div>
+        <h2>Almost there!</h2>
+        <p>Please link your official Roblox account to continue.</p>
+        <button id="robloxLoginBtn" class="btn-roblox">
+            <i class="fas fa-gamepad"></i> Connect with Roblox
+        </button>
+        
+        <div style="display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap;">
+            <a href="#" class="btn-link"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+            <a href="#" class="btn-link"><i class="fas fa-file-contract"></i> Terms of Service</a>
+        </div>
+    </div>
+
+    <div id="noPermissionPage" class="login-container hidden">
+        <div class="logo-main" style="background: #f56565; color: white; font-size: 35px; border: none;">
+            <i class="fas fa-lock"></i>
+        </div>
+        <h2>Access Denied</h2>
+        <p>You do not have permission to view this page. You must be a member of our official Discord server.</p>
+        
+        <div style="display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap;">
+            <a href="#" class="btn-link"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+            <a href="#" class="btn-link"><i class="fas fa-file-contract"></i> Terms of Service</a>
+        </div>
+    </div>
+
+    <div id="mainContent" class="hidden" style="width: 100%; max-width: 800px; padding: 20px;">
+        <div style="background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 20px; padding: 35px; text-align: center;">
+            <div style="font-size: 64px; color: #48bb78; margin-bottom: 15px;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 style="color: #fff; margin-bottom: 10px;">Login Successful!</h2>
+            <p style="color: #888; margin-bottom: 5px;" id="userWelcome">Welcome, ...</p>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;" id="userRobloxInfo">Roblox: ...</p>
+            <button id="logoutBtn" class="btn-discord" style="background: #f56565; box-shadow: none; max-width: 200px; margin: 0 auto;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
     <script>
-        // ===== KONFIGURATION =====
-        const WORKER_URL = 'https://fancy-mode-1373.keulecolin2005.workers.dev';
-        const REDIRECT_URI = 'https://keulecolin2005.github.io/roblox-verify/';
+        // ==========================================
+        // CONFIGURATION
+        // ==========================================
+
+        const DISCORD_CLIENT_ID = '1503179151073345678';
         const ROBLOX_CLIENT_ID = '1529843549493669743';
-        
-        // ===== HELPER =====
-        function showPage(type, data) {
-            const content = document.getElementById('content');
-            
-            if (type === 'login') {
-                content.innerHTML = `
-                    <h2>🔗 Roblox Verification</h2>
-                    <p>Klicke auf den Button, um deinen Roblox Account zu verifizieren.<br>
-                    Dein Discord Nickname wird automatisch geändert.</p>
-                    <button id="startBtn">🎮 Mit Roblox verifizieren</button>
-                    <div class="info-box">
-                        <small>⚠️ Wichtig: Du musst bereits auf dem Discord Server sein!</small>
-                    </div>
-                `;
-                document.getElementById('startBtn').onclick = startRobloxLogin;
-            }
-            else if (type === 'loading') {
-                content.innerHTML = `
-                    <h2>⏳ Verifizierung läuft...</h2>
-                    <div class="loader"></div>
-                    <p>Bitte warte einen Moment...</p>
-                `;
-            }
-            else if (type === 'success') {
-                content.innerHTML = `
-                    <h2 class="success">✅ Verifizierung erfolgreich!</h2>
-                    <div class="info-box">
-                        <p><strong>🎮 Roblox:</strong><br>${escapeHtml(data.displayName)} (@${escapeHtml(data.username)})</p>
-                        <p><strong>🏷️ Neuer Nickname:</strong><br>${escapeHtml(data.nickname)}</p>
-                        <p><strong>✅ Verified Rolle:</strong> Wurde hinzugefügt</p>
-                    </div>
-                    <button onclick="window.location.href='https://discord.com/app'">💬 Zu Discord gehen</button>
-                    <button onclick="location.reload()" style="margin-top:10px;">🔄 Neue Verifizierung</button>
-                `;
-            }
-            else if (type === 'error') {
-                content.innerHTML = `
-                    <h2 class="error">❌ Fehler</h2>
-                    <div class="info-box">
-                        <p>${escapeHtml(data.message)}</p>
-                    </div>
-                    <button onclick="location.reload()">🔄 Erneut versuchen</button>
-                    <button onclick="window.location.href='https://discord.com/app'" style="margin-top:10px;">💬 Zu Discord</button>
-                `;
+        const BACKEND_URL = 'https://gentle-queen-63f0.keulecolin2005.workers.dev';
+        const REDIRECT_URI = 'https://corleonecity.github.io/SwordArtOnline/';
+        const SESSION_KEY = 'sao_persistent_session';
+
+        // ==========================================
+        // STATE
+        // ==========================================
+
+        let currentUser = null;
+        let isCheckingSession = false;
+
+        // ==========================================
+        // HELPERS
+        // ==========================================
+
+        function showNotify(msg, type) {
+            const n = document.getElementById('notification');
+            if (!n) return;
+            n.textContent = msg;
+            n.className = `notification show ${type === 'success' ? 'bg-success' : (type === 'warning' ? 'bg-warning' : 'bg-error')}`;
+            setTimeout(() => n.classList.remove('show'), 4000);
+        }
+
+        function showLoading(show, elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            if (show) {
+                element.disabled = true;
+                element.innerHTML = '<i class="fas fa-spinner"></i> Loading...';
+            } else {
+                element.disabled = false;
+                element.innerHTML = element.dataset.originalText || element.textContent;
             }
         }
-        
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
-        
-        // ===== ROBLOX LOGIN STARTEN =====
-        function startRobloxLogin() {
-            // WICHTIG: Du musst deine Discord User ID hier manuell eintragen zum Testen!
-            // Oder wir machen einen Discord Login vorher...
-            
-            // Für den Test: Bitte deine Discord User ID hier eintragen!
-            // (Rechtsklick auf deinen Namen in Discord -> "Copy ID")
-            const YOUR_DISCORD_USER_ID = prompt('Bitte deine Discord User ID eingeben (Rechtsklick auf deinen Namen in Discord -> Copy ID):');
-            
-            if (!YOUR_DISCORD_USER_ID) {
-                showPage('error', { message: 'Keine Discord ID eingegeben!' });
-                return;
+
+        // ==========================================
+        // SESSION MANAGEMENT
+        // ==========================================
+
+        function saveSession(user) {
+            if (!user) return;
+            const sessionData = {
+                user: user,
+                expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000)
+            };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+        }
+
+        function loadSession() {
+            try {
+                const saved = localStorage.getItem(SESSION_KEY);
+                if (!saved) return null;
+                const sessionData = JSON.parse(saved);
+                if (sessionData.expiresAt && sessionData.expiresAt < Date.now()) {
+                    localStorage.removeItem(SESSION_KEY);
+                    return null;
+                }
+                if (!sessionData.user || !sessionData.user.id) {
+                    localStorage.removeItem(SESSION_KEY);
+                    return null;
+                }
+                return sessionData.user;
+            } catch (e) {
+                localStorage.removeItem(SESSION_KEY);
+                return null;
             }
-            
-            const state = encodeURIComponent(JSON.stringify({ discordId: YOUR_DISCORD_USER_ID }));
-            const url = `https://apis.roblox.com/oauth/v1/authorize?client_id=${ROBLOX_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=openid+profile&state=${state}`;
-            window.location.href = url;
         }
-        
-        // ===== ROBLOX CALLBACK VERARBEITEN =====
-        async function handleRobloxCallback() {
+
+        function clearSession() {
+            localStorage.removeItem(SESSION_KEY);
+            currentUser = null;
+        }
+
+        // ==========================================
+        // UI UPDATES
+        // ==========================================
+
+        function showLoginPage() {
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('robloxPage').classList.add('hidden');
+            document.getElementById('noPermissionPage').classList.add('hidden');
+            document.getElementById('mainContent').classList.add('hidden');
+        }
+
+        function showRobloxPage() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('robloxPage').classList.remove('hidden');
+            document.getElementById('noPermissionPage').classList.add('hidden');
+            document.getElementById('mainContent').classList.add('hidden');
+        }
+
+        function showNoPermissionPage() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('robloxPage').classList.add('hidden');
+            document.getElementById('noPermissionPage').classList.remove('hidden');
+            document.getElementById('mainContent').classList.add('hidden');
+        }
+
+        function showMainContent(user, robloxUser) {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('robloxPage').classList.add('hidden');
+            document.getElementById('noPermissionPage').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+
+            const name = user.global_name || user.username || 'User';
+            document.getElementById('userWelcome').textContent = `Welcome, ${escapeHtml(name)}!`;
+
+            if (robloxUser) {
+                const rName = robloxUser.name || robloxUser.preferred_username || 'Unknown';
+                const rUser = robloxUser.preferred_username || robloxUser.name || 'Unknown';
+                document.getElementById('userRobloxInfo').textContent = `Roblox: ${escapeHtml(rName)} (@${escapeHtml(rUser)})`;
+            } else {
+                document.getElementById('userRobloxInfo').textContent = 'Roblox: Not linked';
+            }
+        }
+
+        // ==========================================
+        // AUTH FUNCTIONS
+        // ==========================================
+
+        async function handleDiscordLogin(code) {
+            try {
+                showLoading(true, 'discordLoginBtn');
+                
+                const res = await fetch(`${BACKEND_URL}/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
+                });
+                const data = await res.json();
+
+                if (data.isAuthorized) {
+                    if (!data.isMember) {
+                        showNoPermissionPage();
+                        return;
+                    }
+                    currentUser = data.user;
+                    saveSession(currentUser);
+                    window.history.replaceState({}, '', REDIRECT_URI);
+                    await checkRobloxLink();
+                } else {
+                    showNotify('Discord authorization failed!', 'error');
+                }
+            } catch (e) {
+                console.error('Discord login error:', e);
+                showNotify('Login Error! Please try again.', 'error');
+            } finally {
+                showLoading(false, 'discordLoginBtn');
+            }
+        }
+
+        async function handleRobloxLogin(code) {
+            try {
+                showLoading(true, 'robloxLoginBtn');
+
+                const savedSession = loadSession();
+                if (!savedSession) {
+                    showNotify('No Discord session found. Please login with Discord first.', 'error');
+                    showLoginPage();
+                    return;
+                }
+                currentUser = savedSession;
+
+                const res = await fetch(`${BACKEND_URL}/roblox-token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
+                });
+
+                if (!res.ok) {
+                    const errorData = await res.text();
+                    throw new Error(`Server error: ${res.status} - ${errorData}`);
+                }
+
+                const data = await res.json();
+
+                if (data.success && data.robloxUser) {
+                    const rDisplayName = data.robloxUser.name || data.robloxUser.preferred_username || 'Unknown';
+                    const rUsername = data.robloxUser.preferred_username || data.robloxUser.name || 'Unknown';
+                    const rId = data.robloxUser.sub;
+
+                    // Update nickname on Discord
+                    await fetch(`${BACKEND_URL}/update-nickname`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: currentUser.id,
+                            nickname: `${rDisplayName} (@${rUsername})`,
+                            guildId: '1439377447630930084'
+                        })
+                    });
+
+                    // Add role to user
+                    await fetch(`${BACKEND_URL}/update-user-role`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: currentUser.id,
+                            roleId: '1503217692843180083',
+                            action: 'add'
+                        })
+                    });
+
+                    await fetch(`${BACKEND_URL}/update-user-role`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: currentUser.id,
+                            roleId: '1503218754643820624',
+                            action: 'remove'
+                        })
+                    });
+
+                    showMainContent(currentUser, data.robloxUser);
+                    showNotify('Roblox account linked successfully!', 'success');
+                } else {
+                    throw new Error(data.error || 'Roblox authentication failed');
+                }
+            } catch (e) {
+                console.error('Roblox login error:', e);
+                showNotify(`Linking Error: ${e.message}`, 'error');
+            } finally {
+                showLoading(false, 'robloxLoginBtn');
+            }
+        }
+
+        async function checkRobloxLink() {
+            if (!currentUser) return;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/check-member`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id, updateRoles: true })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.isMember === false) {
+                        clearSession();
+                        showLoginPage();
+                        showNotify('You are no longer a member of the server.', 'warning');
+                        return;
+                    }
+                }
+
+                // Check if user has linked Roblox via the backend
+                const userRes = await fetch(`${BACKEND_URL}/user-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id })
+                });
+
+                if (userRes.ok) {
+                    const userData = await userRes.json();
+                    if (userData.robloxId && userData.robloxId !== '1') {
+                        showMainContent(currentUser, {
+                            name: userData.robloxName || 'Unknown',
+                            preferred_username: userData.robloxUsername || 'Unknown'
+                        });
+                        return;
+                    }
+                }
+
+                showRobloxPage();
+
+            } catch (e) {
+                console.warn('checkRobloxLink error:', e);
+                showRobloxPage();
+            }
+        }
+
+        async function validateSession() {
+            if (isCheckingSession) return;
+            isCheckingSession = true;
+
+            try {
+                const savedUser = loadSession();
+                if (!savedUser) {
+                    showLoginPage();
+                    return;
+                }
+                currentUser = savedUser;
+
+                const res = await fetch(`${BACKEND_URL}/check-member`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id, updateRoles: true })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.isMember === false) {
+                        clearSession();
+                        showLoginPage();
+                        showNotify('Your session has expired. Please login again.', 'warning');
+                        return;
+                    }
+                }
+
+                await checkRobloxLink();
+            } catch (e) {
+                console.warn('Session validation failed:', e);
+                showLoginPage();
+            } finally {
+                isCheckingSession = false;
+            }
+        }
+
+        // ==========================================
+        // LOGOUT
+        // ==========================================
+
+        function logout() {
+            clearSession();
+            showLoginPage();
+            showNotify('Logged out successfully.', 'success');
+        }
+
+        // ==========================================
+        // EVENT LISTENERS
+        // ==========================================
+
+        function initEventListeners() {
+            const discordBtn = document.getElementById('discordLoginBtn');
+            const robloxBtn = document.getElementById('robloxLoginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            if (discordBtn) {
+                discordBtn.addEventListener('click', () => {
+                    window.location.href =
+                        `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20guilds&state=discord`;
+                });
+            }
+
+            if (robloxBtn) {
+                robloxBtn.addEventListener('click', () => {
+                    window.location.href =
+                        `https://apis.roblox.com/oauth/v1/authorize?client_id=${ROBLOX_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=openid%20profile&state=roblox`;
+                });
+            }
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
+            }
+        }
+
+        // ==========================================
+        // INIT
+        // ==========================================
+
+        function init() {
+            initEventListeners();
+
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
             const state = urlParams.get('state');
-            
-            if (!code) {
-                showPage('login');
-                return;
-            }
-            
-            showPage('loading');
-            
-            try {
-                const response = await fetch(`${WORKER_URL}/verify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code, state })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showPage('success', result);
-                    window.history.pushState({}, '', REDIRECT_URI);
-                } else {
-                    showPage('error', { message: result.error || 'Unbekannter Fehler' });
+
+            if (code) {
+                if (state === 'discord') {
+                    handleDiscordLogin(code);
+                } else if (state === 'roblox') {
+                    handleRobloxLogin(code);
                 }
-            } catch (err) {
-                showPage('error', { message: 'Worker nicht erreichbar: ' + err.message });
+            } else {
+                validateSession();
             }
         }
-        
-        // ===== START =====
-        handleRobloxCallback();
+
+        // Start the app
+        document.addEventListener('DOMContentLoaded', init);
     </script>
+
 </body>
 </html>
