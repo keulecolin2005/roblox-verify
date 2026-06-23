@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -203,13 +203,31 @@
 
         .success-container .icon {
             font-size: 64px;
-            color: #48bb78;
             margin-bottom: 15px;
         }
 
-        .success-container h2 {
+        .success-container .icon.success {
             color: #48bb78;
-            margin-bottom: 10px;
+        }
+
+        .success-container .icon.error {
+            color: #f56565;
+        }
+
+        .success-container .icon.pending {
+            color: #cd7f32;
+        }
+
+        .success-container h2.success {
+            color: #48bb78;
+        }
+
+        .success-container h2.error {
+            color: #f56565;
+        }
+
+        .success-container h2.pending {
+            color: #cd7f32;
         }
 
         .success-container .info-box {
@@ -228,6 +246,14 @@
 
         .success-container .info-box b {
             color: #fff;
+        }
+
+        .success-container .info-box .error-text {
+            color: #f56565;
+        }
+
+        .success-container .info-box .success-text {
+            color: #48bb78;
         }
 
         .btn-logout {
@@ -271,6 +297,11 @@
             color: #cd7f32;
         }
 
+        .status-error {
+            background: rgba(245, 101, 101, 0.2);
+            color: #f56565;
+        }
+
         .debug-box {
             margin-top: 15px;
             padding: 10px;
@@ -282,6 +313,7 @@
             max-height: 100px;
             overflow-y: auto;
             font-family: monospace;
+            border: 1px solid #1a1a1a;
         }
     </style>
 </head>
@@ -313,6 +345,8 @@
             <i class="fas fa-gamepad"></i> Connect with Roblox
         </button>
         
+        <div id="robloxDebugInfo" class="debug-box hidden"></div>
+        
         <div style="display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap;">
             <a href="#" class="btn-link"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
             <a href="#" class="btn-link"><i class="fas fa-file-contract"></i> Terms of Service</a>
@@ -325,7 +359,7 @@
             <i class="fas fa-lock"></i>
         </div>
         <h2 style="color: #f56565;">Access Denied</h2>
-        <p>You do not have permission to view this page. You must be a member of our official Discord server.</p>
+        <p id="noPermissionReason">You do not have permission to view this page.</p>
         
         <div style="display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap;">
             <a href="#" class="btn-link"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
@@ -333,18 +367,19 @@
         </div>
     </div>
 
-    <!-- ===== SUCCESS PAGE ===== -->
-    <div id="successPage" class="success-container hidden">
-        <div class="icon">
-            <i class="fas fa-check-circle"></i>
+    <!-- ===== SUCCESS / STATUS PAGE ===== -->
+    <div id="statusPage" class="success-container hidden">
+        <div class="icon" id="statusIcon">
+            <i class="fas fa-spinner fa-spin"></i>
         </div>
-        <h2>Login Successful!</h2>
-        <p style="color: #888; margin-bottom: 15px;">Your account has been verified.</p>
+        <h2 id="statusTitle">Verifying...</h2>
+        <p id="statusMessage" style="color: #888; margin-bottom: 15px;">Please wait while we verify your account.</p>
         
         <div class="info-box">
             <p><b>👤 Discord:</b> <span id="userWelcome">Loading...</span></p>
-            <p><b>🎮 Roblox:</b> <span id="userRobloxInfo">Not linked</span></p>
+            <p><b>🎮 Roblox:</b> <span id="userRobloxInfo">Checking...</span></p>
             <p><b>📊 Status:</b> <span id="verificationStatus" class="status-badge status-pending">Checking...</span></p>
+            <p id="errorDetails" style="display:none; color:#f56565; font-size:13px; margin-top:10px; border-top:1px solid #1a1a1a; padding-top:10px;"></p>
         </div>
         
         <button id="logoutBtn" class="btn-logout">
@@ -377,7 +412,7 @@
 
         let currentUser = null;
         let isCheckingSession = false;
-        let verificationPolling = null;
+        let isProcessingRoblox = false;
 
         // ==========================================
         // HELPERS
@@ -388,7 +423,7 @@
             if (!n) return;
             n.textContent = msg;
             n.className = `notification show ${type === 'success' ? 'bg-success' : (type === 'warning' ? 'bg-warning' : (type === 'info' ? 'bg-info' : 'bg-error'))}`;
-            setTimeout(() => n.classList.remove('show'), 8000);
+            setTimeout(() => n.classList.remove('show'), 6000);
         }
 
         function showLoading(show, elementId) {
@@ -397,7 +432,7 @@
             if (show) {
                 element.dataset.originalText = element.innerHTML;
                 element.disabled = true;
-                element.innerHTML = '<i class="fas fa-spinner"></i> Loading...';
+                element.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
             } else {
                 element.disabled = false;
                 if (element.dataset.originalText) {
@@ -413,8 +448,8 @@
             return div.innerHTML;
         }
 
-        function setDebug(msg) {
-            const el = document.getElementById('debugInfo');
+        function setDebug(msg, target = 'debugInfo') {
+            const el = document.getElementById(target);
             if (el) {
                 el.classList.remove('hidden');
                 el.textContent = '🔍 ' + msg;
@@ -458,10 +493,6 @@
         function clearSession() {
             localStorage.removeItem(SESSION_KEY);
             currentUser = null;
-            if (verificationPolling) {
-                clearInterval(verificationPolling);
-                verificationPolling = null;
-            }
         }
 
         // ==========================================
@@ -472,79 +503,118 @@
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('robloxPage').classList.add('hidden');
             document.getElementById('noPermissionPage').classList.add('hidden');
-            document.getElementById('successPage').classList.add('hidden');
+            document.getElementById('statusPage').classList.add('hidden');
         }
 
         function showRobloxPage() {
             document.getElementById('loginPage').classList.add('hidden');
             document.getElementById('robloxPage').classList.remove('hidden');
             document.getElementById('noPermissionPage').classList.add('hidden');
-            document.getElementById('successPage').classList.add('hidden');
+            document.getElementById('statusPage').classList.add('hidden');
         }
 
-        function showNoPermissionPage() {
+        function showNoPermissionPage(reason) {
             document.getElementById('loginPage').classList.add('hidden');
             document.getElementById('robloxPage').classList.add('hidden');
             document.getElementById('noPermissionPage').classList.remove('hidden');
-            document.getElementById('successPage').classList.add('hidden');
+            document.getElementById('statusPage').classList.add('hidden');
+            if (reason) {
+                document.getElementById('noPermissionReason').textContent = reason;
+            }
         }
 
-        function showSuccessPage(user, robloxData) {
+        function showStatusPage(user, robloxData, status, errorMessage) {
             document.getElementById('loginPage').classList.add('hidden');
             document.getElementById('robloxPage').classList.add('hidden');
             document.getElementById('noPermissionPage').classList.add('hidden');
-            document.getElementById('successPage').classList.remove('hidden');
+            document.getElementById('statusPage').classList.remove('hidden');
 
-            const name = user.global_name || user.username || 'User';
-            document.getElementById('userWelcome').textContent = `@${escapeHtml(user.username || 'Unknown')} (${escapeHtml(name)})`;
+            const icon = document.getElementById('statusIcon');
+            const title = document.getElementById('statusTitle');
+            const message = document.getElementById('statusMessage');
+            const statusBadge = document.getElementById('verificationStatus');
+            const errorDetails = document.getElementById('errorDetails');
 
-            if (robloxData) {
-                const rName = robloxData.robloxDisplayName || robloxData.robloxUsername || 'Unknown';
-                const rUser = robloxData.robloxUsername || 'Unknown';
-                document.getElementById('userRobloxInfo').textContent = `${escapeHtml(rName)} (@${escapeHtml(rUser)})`;
-                document.getElementById('verificationStatus').textContent = '✅ Verified';
-                document.getElementById('verificationStatus').className = 'status-badge status-verified';
-            } else {
-                document.getElementById('userRobloxInfo').textContent = 'Not linked';
-                document.getElementById('verificationStatus').textContent = '⏳ Pending';
-                document.getElementById('verificationStatus').className = 'status-badge status-pending';
+            const name = user?.global_name || user?.username || 'User';
+            document.getElementById('userWelcome').textContent = `@${escapeHtml(user?.username || 'Unknown')} (${escapeHtml(name)})`;
+
+            // Reset
+            errorDetails.style.display = 'none';
+            errorDetails.textContent = '';
+
+            if (status === 'success') {
+                icon.className = 'icon success';
+                icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                title.className = 'success';
+                title.textContent = '✅ Roblox Login Successful!';
+                message.textContent = 'Your Roblox account has been successfully linked.';
+                statusBadge.textContent = '✅ Verified';
+                statusBadge.className = 'status-badge status-verified';
+                
+                if (robloxData) {
+                    const rName = robloxData.robloxDisplayName || robloxData.robloxUsername || 'Unknown';
+                    const rUser = robloxData.robloxUsername || 'Unknown';
+                    document.getElementById('userRobloxInfo').textContent = `${escapeHtml(rName)} (@${escapeHtml(rUser)})`;
+                } else {
+                    document.getElementById('userRobloxInfo').textContent = 'Linked successfully!';
+                }
+                showNotify('✅ Roblox account verified successfully!', 'success');
+
+            } else if (status === 'pending') {
+                icon.className = 'icon pending';
+                icon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                title.className = 'pending';
+                title.textContent = '⏳ Verifying...';
+                message.textContent = 'Please wait while we verify your Roblox account.';
+                statusBadge.textContent = '⏳ Checking...';
+                statusBadge.className = 'status-badge status-pending';
+                document.getElementById('userRobloxInfo').textContent = 'Verifying...';
+
+            } else if (status === 'error') {
+                icon.className = 'icon error';
+                icon.innerHTML = '<i class="fas fa-times-circle"></i>';
+                title.className = 'error';
+                title.textContent = '❌ Roblox Login Failed';
+                message.textContent = 'There was an error linking your Roblox account.';
+                statusBadge.textContent = '❌ Failed';
+                statusBadge.className = 'status-badge status-error';
+                document.getElementById('userRobloxInfo').textContent = 'Failed';
+                
+                if (errorMessage) {
+                    errorDetails.style.display = 'block';
+                    errorDetails.textContent = '❌ ' + errorMessage;
+                }
+                showNotify('❌ Roblox verification failed: ' + (errorMessage || 'Unknown error'), 'error');
             }
         }
 
         // ==========================================
-        // AUTH FUNCTIONS
+        // DISCORD LOGIN
         // ==========================================
 
         async function handleDiscordLogin(code) {
             try {
                 showLoading(true, 'discordLoginBtn');
                 setDebug('🔄 Exchange code for token...');
-                showNotify('🔄 Logging in...', 'info');
 
-                const url = `${BACKEND_URL}token`;
-                setDebug(`📡 POST ${url}`);
-                
-                const res = await fetch(url, {
+                const res = await fetch(`${BACKEND_URL}token`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
                 });
-
-                setDebug(`📦 Response status: ${res.status}`);
 
                 const data = await res.json();
                 setDebug(`📦 Response: ${JSON.stringify(data).substring(0, 200)}...`);
 
                 if (!res.ok) {
                     showNotify(`Server error: ${data.error || res.status}`, 'error');
-                    setDebug(`❌ Error: ${JSON.stringify(data)}`);
+                    showLoginPage();
                     return;
                 }
 
                 if (data.isAuthorized) {
                     if (!data.isMember) {
-                        showNoPermissionPage();
-                        showNotify('You are not a member of the required server!', 'error');
+                        showNoPermissionPage('You are not a member of the required Discord server.');
                         return;
                     }
                     currentUser = data.user;
@@ -554,31 +624,46 @@
                     await checkRobloxLink();
                 } else {
                     showNotify('Discord authorization failed!', 'error');
-                    setDebug(`❌ Not authorized: ${JSON.stringify(data)}`);
+                    showLoginPage();
                 }
             } catch (e) {
                 console.error('Discord login error:', e);
                 showNotify(`Login Error: ${e.message}`, 'error');
-                setDebug(`💥 Error: ${e.message}`);
+                showLoginPage();
             } finally {
                 showLoading(false, 'discordLoginBtn');
             }
         }
 
+        // ==========================================
+        // ROBLOX LOGIN - KEIN POPUP MEHR!
+        // ==========================================
+
         async function handleRobloxLogin() {
+            if (isProcessingRoblox) return;
+            isProcessingRoblox = true;
+
             try {
                 showLoading(true, 'robloxLoginBtn');
+                setDebug('🔄 Starting Roblox verification...', 'robloxDebugInfo');
 
                 const savedSession = loadSession();
                 if (!savedSession) {
                     showNotify('No Discord session found. Please login with Discord first.', 'error');
                     showLoginPage();
+                    showLoading(false, 'robloxLoginBtn');
+                    isProcessingRoblox = false;
                     return;
                 }
                 currentUser = savedSession;
 
+                // Status Seite anzeigen - pending
+                showStatusPage(currentUser, null, 'pending');
+
+                // State für OAuth
                 const state = encodeURIComponent(JSON.stringify({ discordId: currentUser.id }));
 
+                // Direkte Weiterleitung zu Roblox OAuth - KEIN POPUP!
                 const oauthUrl = 'https://apis.roblox.com/oauth/v1/authorize?' +
                     'client_id=' + ROBLOX_CLIENT_ID +
                     '&redirect_uri=' + encodeURIComponent(ROBLOX_REDIRECT_URI) +
@@ -586,87 +671,94 @@
                     '&scope=openid+profile' +
                     '&state=' + state;
 
-                const popup = window.open(oauthUrl, 'roblox-oauth', 
-                    'width=500,height=700,menubar=no,toolbar=no,location=no,status=no');
-
-                if (!popup) {
-                    showNotify('Please allow popups for this site!', 'error');
-                    showLoading(false, 'robloxLoginBtn');
-                    return;
-                }
-
-                showNotify('Roblox login window opened. Please complete the verification.', 'warning');
-
-                let attempts = 0;
-                const maxAttempts = 120;
+                setDebug(`🔗 Redirecting to Roblox: ${oauthUrl}`, 'robloxDebugInfo');
                 
-                if (verificationPolling) {
-                    clearInterval(verificationPolling);
-                }
-                
-                verificationPolling = setInterval(async () => {
-                    attempts++;
-                    if (attempts > maxAttempts) {
-                        clearInterval(verificationPolling);
-                        verificationPolling = null;
-                        showNotify('Verification timed out. Please try again.', 'error');
-                        showLoading(false, 'robloxLoginBtn');
-                        return;
-                    }
-
-                    try {
-                        const status = await checkVerificationStatus(currentUser.id);
-                        if (status.verified) {
-                            clearInterval(verificationPolling);
-                            verificationPolling = null;
-                            showLoading(false, 'robloxLoginBtn');
-                            showSuccessPage(currentUser, status.robloxData);
-                            showNotify('Roblox account verified successfully!', 'success');
-                        } else if (status.error) {
-                            clearInterval(verificationPolling);
-                            verificationPolling = null;
-                            showLoading(false, 'robloxLoginBtn');
-                            showNotify('Verification failed: ' + status.error, 'error');
-                        }
-                    } catch (e) {
-                        // Ignore, continue polling
-                    }
-                }, 1000);
+                // Direkt weiterleiten (kein Popup)
+                window.location.href = oauthUrl;
 
             } catch (e) {
                 console.error('Roblox login error:', e);
+                showStatusPage(currentUser, null, 'error', e.message);
                 showNotify(`Linking Error: ${e.message}`, 'error');
                 showLoading(false, 'robloxLoginBtn');
+                isProcessingRoblox = false;
             }
         }
 
-        async function checkVerificationStatus(discordId) {
+        // ==========================================
+        // ROBLOX CALLBACK VERARBEITUNG
+        // ==========================================
+
+        async function handleRobloxCallback(code, state) {
             try {
-                const res = await fetch(`${BACKEND_URL}user-data`, {
+                setDebug('🔄 Processing Roblox callback...');
+                showStatusPage(currentUser, null, 'pending');
+
+                let discordId = '';
+                try {
+                    const stateData = JSON.parse(decodeURIComponent(state));
+                    discordId = stateData.discordId;
+                } catch (e) {
+                    // State konnte nicht geparsed werden
+                }
+
+                if (!discordId) {
+                    // Versuche aus Session zu laden
+                    const session = loadSession();
+                    if (session) {
+                        discordId = session.id;
+                        currentUser = session;
+                    }
+                }
+
+                if (!discordId) {
+                    showStatusPage(null, null, 'error', 'No Discord session found. Please login again.');
+                    showNotify('No Discord session found!', 'error');
+                    return;
+                }
+
+                // Code an Worker senden zur Verarbeitung
+                const res = await fetch(`${BACKEND_URL}oauth-callback`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ discordId: discordId })
+                    body: JSON.stringify({ 
+                        code: code, 
+                        discordId: discordId,
+                        redirect_uri: ROBLOX_REDIRECT_URI
+                    })
                 });
 
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.robloxId && data.robloxId !== '1') {
-                        return {
-                            verified: true,
-                            robloxData: {
-                                robloxId: data.robloxId,
-                                robloxUsername: data.robloxUsername,
-                                robloxDisplayName: data.robloxDisplayName
-                            }
-                        };
-                    }
-                    return { verified: false };
+                const data = await res.json();
+                setDebug(`📦 Roblox callback response: ${JSON.stringify(data).substring(0, 300)}...`);
+
+                if (data.success) {
+                    // Erfolg!
+                    showStatusPage(currentUser, {
+                        robloxId: data.robloxId,
+                        robloxUsername: data.robloxUsername,
+                        robloxDisplayName: data.robloxDisplayName
+                    }, 'success');
+                    
+                    showNotify('✅ Roblox account verified successfully!', 'success');
+                } else {
+                    // Fehler
+                    showStatusPage(currentUser, null, 'error', data.error || 'Unknown error');
+                    showNotify('❌ Roblox verification failed: ' + (data.error || 'Unknown error'), 'error');
                 }
-                return { verified: false };
+
             } catch (e) {
-                return { error: e.message };
+                console.error('Roblox callback error:', e);
+                showStatusPage(currentUser, null, 'error', e.message);
+                showNotify('❌ Roblox verification failed: ' + e.message, 'error');
+            } finally {
+                showLoading(false, 'robloxLoginBtn');
+                isProcessingRoblox = false;
             }
         }
+
+        // ==========================================
+        // CHECK ROBLOX LINK STATUS
+        // ==========================================
 
         async function checkRobloxLink() {
             if (!currentUser) return;
@@ -687,26 +779,41 @@
                         showNotify('You are no longer a member of the server.', 'warning');
                         return;
                     }
-                } else {
-                    showNotify('Could not verify server membership. Please try again.', 'error');
-                    showLoginPage();
-                    return;
                 }
 
                 // Prüfe ob User bereits Roblox verifiziert hat
-                const status = await checkVerificationStatus(currentUser.id);
-                if (status.verified) {
-                    showSuccessPage(currentUser, status.robloxData);
-                    showNotify('Welcome back!', 'success');
-                } else {
-                    showRobloxPage();
+                const statusRes = await fetch(`${BACKEND_URL}user-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ discordId: currentUser.id })
+                });
+
+                if (statusRes.ok) {
+                    const data = await statusRes.json();
+                    if (data.robloxId && data.robloxId !== '1') {
+                        // Bereits verifiziert!
+                        showStatusPage(currentUser, {
+                            robloxId: data.robloxId,
+                            robloxUsername: data.robloxUsername,
+                            robloxDisplayName: data.robloxDisplayName
+                        }, 'success');
+                        showNotify('Welcome back!', 'success');
+                        return;
+                    }
                 }
+
+                // Nicht verifiziert -> Roblox Seite anzeigen
+                showRobloxPage();
 
             } catch (e) {
                 console.warn('checkRobloxLink error:', e);
                 showRobloxPage();
             }
         }
+
+        // ==========================================
+        // SESSION VALIDATION
+        // ==========================================
 
         async function validateSession() {
             if (isCheckingSession) return;
@@ -769,7 +876,7 @@
                 discordBtn.addEventListener('click', () => {
                     const discordUrl = 
                         `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20guilds&state=discord`;
-                    setDebug(`🔗 Redirecting to: ${discordUrl}`);
+                    setDebug(`🔗 Redirecting to Discord...`);
                     window.location.href = discordUrl;
                 });
             }
@@ -802,8 +909,19 @@
                 if (state === 'discord') {
                     setDebug('🔑 Discord OAuth Callback erkannt');
                     handleDiscordLogin(code);
+                } else if (state) {
+                    // Roblox OAuth Callback
+                    setDebug('🎮 Roblox OAuth Callback erkannt');
+                    
+                    // Session laden
+                    const session = loadSession();
+                    if (session) {
+                        currentUser = session;
+                    }
+                    
+                    handleRobloxCallback(code, state);
                 } else {
-                    setDebug('🔑 Roblox OAuth Callback erkannt');
+                    // Fallback: Versuche zu validieren
                     validateSession();
                 }
             } else {
