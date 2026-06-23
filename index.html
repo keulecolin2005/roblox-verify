@@ -151,6 +151,8 @@
             transition: 0.3s;
             transform: translateX(200%);
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            max-width: 90%;
+            word-wrap: break-word;
         }
 
         .notification.show {
@@ -169,6 +171,10 @@
             background: #cd7f32;
         }
 
+        .bg-info {
+            background: #5865F2;
+        }
+
         .fa-spinner {
             animation: spin 1s linear infinite;
         }
@@ -184,7 +190,6 @@
             }
         }
 
-        /* Success Page */
         .success-container {
             text-align: center;
             background: #0a0a0a;
@@ -265,6 +270,19 @@
             background: rgba(205, 127, 50, 0.2);
             color: #cd7f32;
         }
+
+        .debug-box {
+            margin-top: 15px;
+            padding: 10px;
+            background: #0f0f0f;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #666;
+            text-align: left;
+            max-height: 100px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -277,6 +295,8 @@
         <button id="discordLoginBtn" class="btn-discord">
             <i class="fab fa-discord"></i> Login with Discord
         </button>
+        
+        <div id="debugInfo" class="debug-box hidden"></div>
         
         <div style="display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap;">
             <a href="#" class="btn-link"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
@@ -367,8 +387,8 @@
             const n = document.getElementById('notification');
             if (!n) return;
             n.textContent = msg;
-            n.className = `notification show ${type === 'success' ? 'bg-success' : (type === 'warning' ? 'bg-warning' : 'bg-error')}`;
-            setTimeout(() => n.classList.remove('show'), 4000);
+            n.className = `notification show ${type === 'success' ? 'bg-success' : (type === 'warning' ? 'bg-warning' : (type === 'info' ? 'bg-info' : 'bg-error'))}`;
+            setTimeout(() => n.classList.remove('show'), 8000);
         }
 
         function showLoading(show, elementId) {
@@ -391,6 +411,15 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function setDebug(msg) {
+            const el = document.getElementById('debugInfo');
+            if (el) {
+                el.classList.remove('hidden');
+                el.textContent = '🔍 ' + msg;
+            }
+            console.log('🔍', msg);
         }
 
         // ==========================================
@@ -489,29 +518,48 @@
         async function handleDiscordLogin(code) {
             try {
                 showLoading(true, 'discordLoginBtn');
+                setDebug('🔄 Exchange code for token...');
+                showNotify('🔄 Logging in...', 'info');
+
+                const url = `${BACKEND_URL}token`;
+                setDebug(`📡 POST ${url}`);
                 
-                const res = await fetch(`${BACKEND_URL}token`, {
+                const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
                 });
+
+                setDebug(`📦 Response status: ${res.status}`);
+
                 const data = await res.json();
+                setDebug(`📦 Response: ${JSON.stringify(data).substring(0, 200)}...`);
+
+                if (!res.ok) {
+                    showNotify(`Server error: ${data.error || res.status}`, 'error');
+                    setDebug(`❌ Error: ${JSON.stringify(data)}`);
+                    return;
+                }
 
                 if (data.isAuthorized) {
                     if (!data.isMember) {
                         showNoPermissionPage();
+                        showNotify('You are not a member of the required server!', 'error');
                         return;
                     }
                     currentUser = data.user;
                     saveSession(currentUser);
                     window.history.replaceState({}, '', REDIRECT_URI);
+                    showNotify('✅ Discord login successful!', 'success');
                     await checkRobloxLink();
                 } else {
                     showNotify('Discord authorization failed!', 'error');
+                    setDebug(`❌ Not authorized: ${JSON.stringify(data)}`);
                 }
             } catch (e) {
                 console.error('Discord login error:', e);
-                showNotify('Login Error! Please try again.', 'error');
+                showNotify(`Login Error: ${e.message}`, 'error');
+                setDebug(`💥 Error: ${e.message}`);
             } finally {
                 showLoading(false, 'discordLoginBtn');
             }
@@ -529,7 +577,6 @@
                 }
                 currentUser = savedSession;
 
-                // State für OAuth: Discord User ID
                 const state = encodeURIComponent(JSON.stringify({ discordId: currentUser.id }));
 
                 const oauthUrl = 'https://apis.roblox.com/oauth/v1/authorize?' +
@@ -539,7 +586,6 @@
                     '&scope=openid+profile' +
                     '&state=' + state;
 
-                // Öffne Roblox OAuth in neuem Fenster
                 const popup = window.open(oauthUrl, 'roblox-oauth', 
                     'width=500,height=700,menubar=no,toolbar=no,location=no,status=no');
 
@@ -551,9 +597,8 @@
 
                 showNotify('Roblox login window opened. Please complete the verification.', 'warning');
 
-                // Polling: Prüfe ob User jetzt verifiziert ist
                 let attempts = 0;
-                const maxAttempts = 120; // 120 Sekunden
+                const maxAttempts = 120;
                 
                 if (verificationPolling) {
                     clearInterval(verificationPolling);
@@ -642,6 +687,10 @@
                         showNotify('You are no longer a member of the server.', 'warning');
                         return;
                     }
+                } else {
+                    showNotify('Could not verify server membership. Please try again.', 'error');
+                    showLoginPage();
+                    return;
                 }
 
                 // Prüfe ob User bereits Roblox verifiziert hat
@@ -718,8 +767,10 @@
 
             if (discordBtn) {
                 discordBtn.addEventListener('click', () => {
-                    window.location.href =
+                    const discordUrl = 
                         `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20guilds&state=discord`;
+                    setDebug(`🔗 Redirecting to: ${discordUrl}`);
+                    window.location.href = discordUrl;
                 });
             }
 
@@ -743,14 +794,20 @@
             const code = urlParams.get('code');
             const state = urlParams.get('state');
 
+            setDebug(`📌 URL: ${window.location.href}`);
+            setDebug(`📌 Code: ${code ? '✅ vorhanden' : '❌ nicht vorhanden'}`);
+            setDebug(`📌 State: ${state || '❌'}`);
+
             if (code) {
                 if (state === 'discord') {
+                    setDebug('🔑 Discord OAuth Callback erkannt');
                     handleDiscordLogin(code);
                 } else {
-                    // Roblox OAuth Callback - Worker leitet nach /roblox-verify/ weiter
+                    setDebug('🔑 Roblox OAuth Callback erkannt');
                     validateSession();
                 }
             } else {
+                setDebug('🔄 Kein Code, Session wird geladen');
                 validateSession();
             }
         }
