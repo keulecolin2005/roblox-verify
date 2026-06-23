@@ -344,7 +344,6 @@
         // CONFIGURATION
         // ==========================================
 
-        // ⚠️ HIER DEINE WORKER-URL EINTRAGEN ⚠️
         const BACKEND_URL = 'https://fancy-mode-1373.keulecolin2005.workers.dev/';
         const DISCORD_CLIENT_ID = '1514252695853338634';
         const ROBLOX_CLIENT_ID = '1529843549493669743';
@@ -358,6 +357,7 @@
 
         let currentUser = null;
         let isCheckingSession = false;
+        let verificationPolling = null;
 
         // ==========================================
         // HELPERS
@@ -429,6 +429,10 @@
         function clearSession() {
             localStorage.removeItem(SESSION_KEY);
             currentUser = null;
+            if (verificationPolling) {
+                clearInterval(verificationPolling);
+                verificationPolling = null;
+            }
         }
 
         // ==========================================
@@ -486,7 +490,7 @@
             try {
                 showLoading(true, 'discordLoginBtn');
                 
-                const res = await fetch(`${BACKEND_URL}/token`, {
+                const res = await fetch(`${BACKEND_URL}token`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
@@ -541,22 +545,25 @@
 
                 if (!popup) {
                     showNotify('Please allow popups for this site!', 'error');
+                    showLoading(false, 'robloxLoginBtn');
                     return;
                 }
-
-                // Auf Callback warten (Worker leitet nach erfolgreicher Verifizierung weiter)
-                // Nach der Verifizierung wird der User auf die Seite zurückgeleitet
-                // Wir prüfen regelmäßig, ob der User jetzt verifiziert ist
 
                 showNotify('Roblox login window opened. Please complete the verification.', 'warning');
 
                 // Polling: Prüfe ob User jetzt verifiziert ist
                 let attempts = 0;
-                const maxAttempts = 60; // 60 Sekunden
-                const interval = setInterval(async () => {
+                const maxAttempts = 120; // 120 Sekunden
+                
+                if (verificationPolling) {
+                    clearInterval(verificationPolling);
+                }
+                
+                verificationPolling = setInterval(async () => {
                     attempts++;
                     if (attempts > maxAttempts) {
-                        clearInterval(interval);
+                        clearInterval(verificationPolling);
+                        verificationPolling = null;
                         showNotify('Verification timed out. Please try again.', 'error');
                         showLoading(false, 'robloxLoginBtn');
                         return;
@@ -565,12 +572,14 @@
                     try {
                         const status = await checkVerificationStatus(currentUser.id);
                         if (status.verified) {
-                            clearInterval(interval);
+                            clearInterval(verificationPolling);
+                            verificationPolling = null;
                             showLoading(false, 'robloxLoginBtn');
                             showSuccessPage(currentUser, status.robloxData);
                             showNotify('Roblox account verified successfully!', 'success');
                         } else if (status.error) {
-                            clearInterval(interval);
+                            clearInterval(verificationPolling);
+                            verificationPolling = null;
                             showLoading(false, 'robloxLoginBtn');
                             showNotify('Verification failed: ' + status.error, 'error');
                         }
@@ -588,7 +597,7 @@
 
         async function checkVerificationStatus(discordId) {
             try {
-                const res = await fetch(`${BACKEND_URL}/user-data`, {
+                const res = await fetch(`${BACKEND_URL}user-data`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ discordId: discordId })
@@ -619,7 +628,7 @@
 
             try {
                 // Prüfe ob User im Server ist
-                const res = await fetch(`${BACKEND_URL}/check-member`, {
+                const res = await fetch(`${BACKEND_URL}check-member`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: currentUser.id, updateRoles: true })
@@ -663,7 +672,7 @@
                 currentUser = savedUser;
 
                 // Prüfe ob User noch im Server ist
-                const res = await fetch(`${BACKEND_URL}/check-member`, {
+                const res = await fetch(`${BACKEND_URL}check-member`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: currentUser.id, updateRoles: true })
@@ -739,8 +748,6 @@
                     handleDiscordLogin(code);
                 } else {
                     // Roblox OAuth Callback - Worker leitet nach /roblox-verify/ weiter
-                    // Der User wird nach erfolgreicher Verifizierung hierher zurückgeleitet
-                    // Wir prüfen den Status
                     validateSession();
                 }
             } else {
